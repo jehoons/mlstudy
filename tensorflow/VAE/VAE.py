@@ -2,8 +2,10 @@ from __future__ import division, print_function, absolute_import
 
 import os, argparse
 import numpy as np
+
 import matplotlib
 matplotlib.use('Agg') 
+
 import matplotlib.pyplot as plt
 
 from scipy.stats import norm
@@ -11,13 +13,6 @@ import tensorflow as tf
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
-
-#scratch_dir = '/root/.scratch/' + \
-#    "/".join( (os.getcwd().split('/')[3:]) )
-#try: 
-#    os.makedirs(scratch_dir)
-#except: 
-#    pass
 
 # Parameters
 learning_rate = 0.001
@@ -30,8 +25,8 @@ hidden_dim = 512
 latent_dim = 2
 
 progpath = os.path.dirname(os.path.realpath(__file__))
-model_data = os.path.join(progpath, 'model', 'model.ckpt') 
-os.system('mkdir -p %s' % os.path.dirname(model_data))
+#model_data = os.path.join(progpath, 'model', 'model.ckpt') 
+#os.system('mkdir -p %s' % os.path.dirname(model_data))
 
 # A custom initialization (see Xavier Glorot init)
 def glorot_init(shape):
@@ -86,8 +81,8 @@ def vae_loss(x_reconstructed, x_true):
     encode_decode_loss = x_true * tf.log(1e-10 + x_reconstructed) \
                 + (1 - x_true) * tf.log(1e-10 + 1 - x_reconstructed)
     encode_decode_loss = -tf.reduce_sum(encode_decode_loss, 1)
+
     # KL Divergence loss
-    # https://stats.stackexchange.com/questions/7440/kl-divergence-between-two-univariate-gaussians
     kl_div_loss = 1 + z_std - tf.square(z_mean) - tf.exp(z_std)
     kl_div_loss = -0.5 * tf.reduce_sum(kl_div_loss, 1)
     return tf.reduce_mean(encode_decode_loss + kl_div_loss)
@@ -99,7 +94,7 @@ tf.summary.histogram("loss", loss_op)
 optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss_op)
 
-def model_train():
+def model_train(args_dict):
     mnist = input_data.read_data_sets("./scratch", one_hot=True)
 
     # Initialize the variables (i.e. assign their default value)
@@ -110,29 +105,29 @@ def model_train():
         sess.run(init)
         train_writer = tf.summary.FileWriter( './logs/1/train ', sess.graph)    
 
-        for i in range(1,num_steps+1):
+        for i in range(1, num_steps+1):
             batch_x, _ = mnist.train.next_batch(batch_size)
             feed_dict = {input_image: batch_x}
             _, l = sess.run([train_op, loss_op], feed_dict=feed_dict)
                 
-            if i % 100 == 0 or i == 1:
+            if i % 500 == 0 or i == 1:
                 merge = tf.summary.merge_all()
                 summary, _, l = sess.run([merge, train_op, loss_op], \
                         feed_dict=feed_dict)
                 train_writer.add_summary(summary, i)
 
-            if i % 1000 == 0 or i == 1:
+            if i % 100 == 0 or i == 1:
                 print('Step %i, Loss: %f' % (i, l))
                 
-        saver.save(sess, model_data)
+        saver.save(sess, args_dict['modeldata'])
 
-def model_test():
+def model_test(args_dict):
     init = tf.global_variables_initializer()
 
     with tf.Session() as sess: 
         sess.run(init)
 
-        tf.train.Saver().restore(sess, model_data)
+        tf.train.Saver().restore(sess, args_dict['modeldata'])
         noise_input = tf.placeholder(tf.float32, shape=[None, latent_dim])
 
         decoder = tf.matmul(noise_input, weights['decoder_h1']) + biases['decoder_b1']
@@ -140,7 +135,7 @@ def model_test():
         decoder = tf.matmul(decoder, weights['decoder_out']) + biases['decoder_out']
         decoder = tf.nn.sigmoid(decoder)
 
-        n = 30
+        n = 15
         x_axis = np.linspace(-3, 3, n)
         y_axis = np.linspace(-3, 3, n)
 
@@ -156,7 +151,7 @@ def model_test():
         Xi, Yi = np.meshgrid(x_axis, y_axis)
         plt.imshow(canvas, origin="upper", cmap="gray")
         plt.show()
-        plt.savefig('./scratch/latent.png', dpi=300)
+        plt.savefig('scratch/latent.png', dpi=150)
     
 if __name__ == '__main__':
 
@@ -165,18 +160,20 @@ if __name__ == '__main__':
     parser.add_argument("exec_mode", metavar="MODE", \
                         type=str, help="enter the mode for execution. i.e train|test")
     
-    parser.add_argument("-l", "--logdir", metavar='DIR', \
+    parser.add_argument("-l", "--logdir", metavar='LOG_DIR', \
                         type=str, help="log directory default: %(default)s", \
                         default="./logdir")
+
+    parser.add_argument("-d", "--modeldata", metavar='MODEL_DIR', \
+                        type=str, help="model directory default: %(default)s", \
+                        default="scratch/model/VAE.ckpt")
     
     args = parser.parse_args()
     
     args_dict = vars(args)
     
     if args_dict['exec_mode'] == 'train': 
-        model_train()
-        
+        model_train(args_dict)
     else: 
-        model_test()
-        
+        model_test(args_dict)
         
