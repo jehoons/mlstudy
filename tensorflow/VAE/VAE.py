@@ -80,6 +80,7 @@ def vae_loss(x_reconstructed, x_true):
     # reconstruction loss - cross entropy
     encode_decode_loss = x_true * tf.log(1e-10 + x_reconstructed) \
                 + (1 - x_true) * tf.log(1e-10 + 1 - x_reconstructed)
+
     encode_decode_loss = -tf.reduce_sum(encode_decode_loss, 1)
 
     # KL Divergence loss
