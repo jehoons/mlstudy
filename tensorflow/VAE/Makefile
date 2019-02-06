@@ -10,7 +10,7 @@ $(obj_latent): $(obj_model)
 	python VAE.py test
 	
 board:
-	tensorboard --logdir=logs --host=0.0.0.0
+	tensorboard --logdir=scratch/logs --host=0.0.0.0
 
 clean: 
 	rm -rf logs $(obj_model) $(obj_latent)

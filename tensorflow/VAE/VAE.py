@@ -104,7 +104,7 @@ def model_train(args_dict):
 
     with tf.Session() as sess:
         sess.run(init)
-        train_writer = tf.summary.FileWriter( './logs/1/train ', sess.graph)    
+        train_writer = tf.summary.FileWriter( './scratch/logs/1/train ', sess.graph)    
 
         for i in range(1, num_steps+1):
             batch_x, _ = mnist.train.next_batch(batch_size)
